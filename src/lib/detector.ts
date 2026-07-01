@@ -36,8 +36,31 @@ export interface Detection {
 const detectorPromises = new Map<string, Promise<ObjectDetectionPipeline>>();
 let activeBackend: Backend = 'wasm';
 
-function supportsWebGPU(): boolean {
-  return typeof navigator !== 'undefined' && 'gpu' in navigator;
+type GpuLike = { requestAdapter(): Promise<unknown> };
+
+let backendPromise: Promise<Backend> | null = null;
+
+// Just checking `navigator.gpu` isn't enough: it can exist while no adapter is
+// actually available, in which case WebGPU init fails. So we request an adapter.
+function probeBackend(): Promise<Backend> {
+  if (backendPromise) return backendPromise;
+  backendPromise = (async (): Promise<Backend> => {
+    const gpu = (navigator as Navigator & { gpu?: GpuLike }).gpu;
+    if (typeof navigator === 'undefined' || !gpu) return 'wasm';
+    try {
+      const adapter = await gpu.requestAdapter();
+      return adapter ? 'webgpu' : 'wasm';
+    } catch {
+      return 'wasm';
+    }
+  })();
+  return backendPromise;
+}
+
+/** Probes for a usable WebGPU adapter and remembers the result. */
+export async function detectBackend(): Promise<Backend> {
+  activeBackend = await probeBackend();
+  return activeBackend;
 }
 
 export function getBackend(): Backend {
@@ -55,9 +78,6 @@ export function loadDetector(
   const cached = detectorPromises.get(modelId);
   if (cached) return cached;
 
-  const useWebGPU = supportsWebGPU();
-  activeBackend = useWebGPU ? 'webgpu' : 'wasm';
-
   const progress_callback = (event: unknown) => {
     const e = event as { status?: string; progress?: number };
     if (e?.status === 'progress' && typeof e.progress === 'number') {
@@ -73,14 +93,19 @@ export function loadDetector(
     options?: Record<string, unknown>,
   ) => Promise<ObjectDetectionPipeline>;
 
-  const promise = createPipeline('object-detection', modelId, {
-    device: useWebGPU ? 'webgpu' : 'wasm',
-    progress_callback,
-  }).catch((err) => {
-    // Don't keep a rejected promise cached, so the next attempt retries cleanly.
-    detectorPromises.delete(modelId);
-    throw err;
-  });
+  const promise = probeBackend()
+    .then((backend) => {
+      activeBackend = backend;
+      return createPipeline('object-detection', modelId, {
+        device: backend,
+        progress_callback,
+      });
+    })
+    .catch((err) => {
+      // Don't keep a rejected promise cached, so the next attempt retries cleanly.
+      detectorPromises.delete(modelId);
+      throw err;
+    });
 
   detectorPromises.set(modelId, promise);
   return promise;

@@ -7,6 +7,7 @@ import {
   loadDetector,
   detectFrame,
   getBackend,
+  detectBackend,
   MODELS,
   DEFAULT_MODEL_ID,
   type Backend,
@@ -60,6 +61,13 @@ export default function App() {
   useEffect(() => {
     thresholdRef.current = threshold;
   }, [threshold]);
+
+  // Probe the real backend up front so the badge is accurate before the first run.
+  useEffect(() => {
+    detectBackend()
+      .then(setBackend)
+      .catch(() => {});
+  }, []);
 
   function drawOverlay(dets: Detection[]) {
     const video = videoRef.current;
