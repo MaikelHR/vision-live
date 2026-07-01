@@ -55,7 +55,7 @@ export default function StatsPanel({
         <Readout label="Detections / s" value={running ? String(fps) : '-'} />
         <Readout label="Inference" value={running ? `${inferenceMs} ms` : '-'} />
         <Readout label="Backend" value={backend.toUpperCase()} />
-        <Readout label="Server calls" value="0" />
+        <Readout label="Objects" value={running ? String(detections.length) : '-'} />
       </div>
 
       <div className="flex-1">

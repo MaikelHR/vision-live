@@ -310,12 +310,12 @@ function Header({ backend, running }: { backend: Backend; running: boolean }) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-3 border-b border-line pb-5">
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-signal">
-          on-device computer vision
-        </p>
-        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-fg md:text-4xl">
-          Vision&nbsp;Live
+        <h1 className="font-display text-3xl font-bold tracking-tight text-fg md:text-4xl">
+          Vision Live
         </h1>
+        <p className="mt-1 text-sm text-muted">
+          Real-time object detection that runs in your browser.
+        </p>
       </div>
       <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5">
         <span

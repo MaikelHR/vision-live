@@ -51,24 +51,6 @@ body {
 .bracket.bl { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
 .bracket.br { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
 
-/* Thin scanning line that sweeps the frame while detection is live */
-.scanline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--color-signal), transparent);
-  opacity: 0.55;
-  z-index: 2;
-  animation: sweep 3.2s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes sweep {
-  0% { top: 0; }
-  100% { top: 100%; }
-}
-
 /* Soft blink for the live status dot */
 .live-dot {
   animation: blink 1.4s ease-in-out infinite;
@@ -79,7 +61,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scanline,
   .live-dot {
     animation: none;
   }

@@ -20,7 +20,6 @@ export default function CameraStage({
   error,
   onStart,
 }: CameraStageProps) {
-  const live = status === 'running';
   const flip = mirror ? 'scaleX(-1)' : 'none';
 
   return (
@@ -30,7 +29,6 @@ export default function CameraStage({
       <span className="bracket tr" />
       <span className="bracket bl" />
       <span className="bracket br" />
-      {live && <span className="scanline" />}
 
       <video
         ref={videoRef}
