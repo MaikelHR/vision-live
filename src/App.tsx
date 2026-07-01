@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import CameraStage from './components/CameraStage';
 import StatsPanel from './components/StatsPanel';
 import Controls from './components/Controls';
+import Gallery from './components/Gallery';
 import {
   loadDetector,
   detectFrame,
@@ -14,6 +15,16 @@ import { colorForLabel } from './lib/colors';
 
 export type Status = 'idle' | 'loading' | 'ready' | 'running' | 'error';
 
+export interface Snapshot {
+  id: string;
+  dataUrl: string;
+  time: string;
+  summary: string;
+  filename: string;
+}
+
+const MAX_SNAPSHOTS = 12;
+
 export default function App() {
   const [status, setStatus] = useState<Status>('idle');
   const [progress, setProgress] = useState(0);
@@ -24,6 +35,7 @@ export default function App() {
   const [threshold, setThreshold] = useState(0.5);
   const [mirror, setMirror] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -169,6 +181,49 @@ export default function App() {
     setStatus(detectorRef.current ? 'ready' : 'idle');
   }
 
+  function captureSnapshot() {
+    const video = videoRef.current;
+    const overlay = overlayRef.current;
+    if (!video || !overlay) return;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (!w || !h) return;
+
+    // Composite the current frame with the overlay boxes. We draw it upright
+    // (never mirrored) so the labels stay readable and it matches the real scene.
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, w, h);
+    ctx.drawImage(overlay, 0, 0, w, h);
+
+    const now = new Date();
+    const stamp = `${now.getFullYear()}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${p2(
+      now.getHours(),
+    )}${p2(now.getMinutes())}${p2(now.getSeconds())}`;
+    const snap: Snapshot = {
+      id: crypto.randomUUID(),
+      dataUrl: canvas.toDataURL('image/jpeg', 0.9),
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      summary: summarize(latestRef.current),
+      filename: `vision-live-${stamp}.jpg`,
+    };
+    setSnapshots((prev) => [snap, ...prev].slice(0, MAX_SNAPSHOTS));
+  }
+
+  function downloadSnapshot(snap: Snapshot) {
+    const a = document.createElement('a');
+    a.href = snap.dataUrl;
+    a.download = snap.filename;
+    a.click();
+  }
+
+  function removeSnapshot(id: string) {
+    setSnapshots((prev) => prev.filter((s) => s.id !== id));
+  }
+
   // Clean up on unmount.
   useEffect(() => {
     return () => {
@@ -200,6 +255,13 @@ export default function App() {
             onStop={stop}
             onThreshold={setThreshold}
             onMirror={setMirror}
+            onSnapshot={captureSnapshot}
+          />
+          <Gallery
+            snapshots={snapshots}
+            onDownload={downloadSnapshot}
+            onRemove={removeSnapshot}
+            onClear={() => setSnapshots([])}
           />
         </div>
 
@@ -285,6 +347,20 @@ function Footer() {
       <span>Built with Transformers.js, running client-side</span>
     </footer>
   );
+}
+
+function p2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function summarize(dets: Detection[]): string {
+  if (dets.length === 0) return 'No detections';
+  const counts = new Map<string, number>();
+  for (const d of dets) counts.set(d.label, (counts.get(d.label) ?? 0) + 1);
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, n]) => `${n} ${label}`)
+    .join(', ');
 }
 
 function describeError(err: unknown): string {
