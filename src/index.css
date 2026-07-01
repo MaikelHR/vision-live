@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* ---- Design tokens (exposed as Tailwind utilities: bg-ink, text-muted, font-mono, ...) ---- */
+@theme {
+  --color-ink: #0b0d12;
+  --color-surface: #14171f;
+  --color-surface-2: #1b1f2a;
+  --color-line: #2a2f3c;
+  --color-fg: #e9ebf2;
+  --color-muted: #8a92a6;
+  --color-signal: #ff6b4a;
+
+  --font-display: "Space Grotesk", ui-sans-serif, sans-serif;
+  --font-body: "Inter", ui-sans-serif, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(255, 107, 74, 0.08), transparent 60%),
+    var(--color-ink);
+  color: var(--color-fg);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Signature: viewfinder corner brackets around the camera stage ---- */
+.bracket {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-color: var(--color-signal);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.bracket.tl { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
+.bracket.tr { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
+.bracket.bl { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
+.bracket.br { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Thin scanning line that sweeps the frame while detection is live */
+.scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-signal), transparent);
+  opacity: 0.55;
+  z-index: 2;
+  animation: sweep 3.2s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes sweep {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+
+/* Soft blink for the live status dot */
+.live-dot {
+  animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanline,
+  .live-dot {
+    animation: none;
+  }
+}
+
+/* Range input, themed to match the signal color */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-line);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-signal);
+  cursor: pointer;
+  border: 2px solid var(--color-ink);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-ink);
+  border-radius: 50%;
+  background: var(--color-signal);
+  cursor: pointer;
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
+}
