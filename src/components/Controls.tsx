@@ -113,7 +113,7 @@ export default function Controls({
             </option>
           ))}
         </select>
-        {switchingModel && <span className="font-mono text-xs text-muted">loading...</span>}
+        {switchingModel && <span className="font-mono text-xs text-muted">Loading...</span>}
       </label>
     </div>
   );

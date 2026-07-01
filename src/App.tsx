@@ -342,7 +342,7 @@ function HowItWorks() {
     {
       k: '01',
       title: 'Runs in the browser',
-      body: 'The YOLOS model loads once and runs with WebGPU, falling back to WebAssembly when WebGPU is not available. Nothing to install.',
+      body: 'The YOLOS model loads once and runs on WebGPU, falling back to WebAssembly when that is not available. Nothing to install.',
     },
     {
       k: '02',
