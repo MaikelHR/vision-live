@@ -7,7 +7,8 @@ import {
   loadDetector,
   detectFrame,
   getBackend,
-  MODEL_ID,
+  MODELS,
+  DEFAULT_MODEL_ID,
   type Backend,
   type Detection,
 } from './lib/detector';
@@ -36,6 +37,8 @@ export default function App() {
   const [mirror, setMirror] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [modelId, setModelId] = useState<string>(DEFAULT_MODEL_ID);
+  const [switchingModel, setSwitchingModel] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -138,7 +141,7 @@ export default function App() {
     try {
       // Kick off model load and camera at the same time.
       setStatus('loading');
-      const detectorP = loadDetector((p) => setProgress(p));
+      const detectorP = loadDetector(modelId, (p) => setProgress(p));
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -224,6 +227,26 @@ export default function App() {
     setSnapshots((prev) => prev.filter((s) => s.id !== id));
   }
 
+  async function changeModel(id: string) {
+    if (id === modelId) return;
+    const previous = modelId;
+    setModelId(id);
+    // Nothing is loaded yet: start() will pick up the new id. Otherwise swap the
+    // detector live, letting the loop keep using the current one until it's ready.
+    if (!detectorRef.current) return;
+    setSwitchingModel(true);
+    try {
+      const detector = await loadDetector(id);
+      detectorRef.current = detector;
+      setBackend(getBackend());
+    } catch (err) {
+      console.error('model switch failed:', err);
+      setModelId(previous);
+    } finally {
+      setSwitchingModel(false);
+    }
+  }
+
   // Clean up on unmount.
   useEffect(() => {
     return () => {
@@ -256,6 +279,9 @@ export default function App() {
             onThreshold={setThreshold}
             onMirror={setMirror}
             onSnapshot={captureSnapshot}
+            modelId={modelId}
+            switchingModel={switchingModel}
+            onModel={changeModel}
           />
           <Gallery
             snapshots={snapshots}
@@ -275,7 +301,7 @@ export default function App() {
       </main>
 
       <HowItWorks />
-      <Footer />
+      <Footer modelId={modelId} />
     </div>
   );
 }
@@ -338,11 +364,11 @@ function HowItWorks() {
   );
 }
 
-function Footer() {
+function Footer({ modelId }: { modelId: string }) {
   return (
     <footer className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-5 font-mono text-xs text-muted">
       <span>
-        Model: <span className="text-fg">{MODEL_ID}</span>
+        Model: <span className="text-fg">{modelId}</span>
       </span>
       <span>Built with Transformers.js, running client-side</span>
     </footer>

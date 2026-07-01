@@ -1,25 +1,32 @@
 import type { Status } from '../App';
+import { MODELS } from '../lib/detector';
 
 interface ControlsProps {
   status: Status;
   threshold: number;
   mirror: boolean;
+  modelId: string;
+  switchingModel: boolean;
   onStart: () => void;
   onStop: () => void;
   onThreshold: (value: number) => void;
   onMirror: (value: boolean) => void;
   onSnapshot: () => void;
+  onModel: (id: string) => void;
 }
 
 export default function Controls({
   status,
   threshold,
   mirror,
+  modelId,
+  switchingModel,
   onStart,
   onStop,
   onThreshold,
   onMirror,
   onSnapshot,
+  onModel,
 }: ControlsProps) {
   const running = status === 'running';
   const busy = status === 'loading';
@@ -90,6 +97,23 @@ export default function Controls({
           className="accent-[var(--color-signal)]"
         />
         <span className="font-mono text-xs uppercase tracking-wider text-muted">Mirror</span>
+      </label>
+
+      <label className="flex items-center gap-2">
+        <span className="font-mono text-xs uppercase tracking-wider text-muted">Model</span>
+        <select
+          value={modelId}
+          onChange={(e) => onModel(e.target.value)}
+          disabled={busy || switchingModel}
+          className="rounded-lg border border-line bg-surface-2 px-2 py-1.5 font-mono text-xs text-fg outline-none transition hover:border-signal disabled:opacity-50"
+        >
+          {MODELS.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label} ({m.note})
+            </option>
+          ))}
+        </select>
+        {switchingModel && <span className="font-mono text-xs text-muted">loading...</span>}
       </label>
     </div>
   );

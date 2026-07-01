@@ -9,9 +9,20 @@ import {
 // Face Hub on first run and caches it in the browser, so later loads work offline.
 env.allowLocalModels = false;
 
-// Small, fast object-detection model trained on the 80 COCO classes
-// (person, laptop, cup, chair, phone, ...). ~tens of MB, cached after first run.
-export const MODEL_ID = 'Xenova/yolos-tiny';
+export interface ModelOption {
+  id: string;
+  label: string;
+  note: string;
+}
+
+// Object-detection models (80 COCO classes: person, laptop, cup, chair, phone, ...)
+// available as ONNX for Transformers.js. Each downloads on first use, then caches.
+export const MODELS: ModelOption[] = [
+  { id: 'Xenova/yolos-tiny', label: 'YOLOS-tiny', note: 'fast, lighter' },
+  { id: 'Xenova/yolos-small', label: 'YOLOS-small', note: 'slower, more accurate' },
+];
+
+export const DEFAULT_MODEL_ID = MODELS[0].id;
 
 export type Backend = 'webgpu' | 'wasm';
 
@@ -21,7 +32,8 @@ export interface Detection {
   box: { xmin: number; ymin: number; xmax: number; ymax: number };
 }
 
-let detectorPromise: Promise<ObjectDetectionPipeline> | null = null;
+// One cached pipeline per model id, so switching back to a loaded model is instant.
+const detectorPromises = new Map<string, Promise<ObjectDetectionPipeline>>();
 let activeBackend: Backend = 'wasm';
 
 function supportsWebGPU(): boolean {
@@ -33,13 +45,15 @@ export function getBackend(): Backend {
 }
 
 /**
- * Loads the detection model once and reuses it. WebGPU is used when available
- * (much faster), otherwise it falls back to WebAssembly on the CPU.
+ * Loads a detection model and reuses it on later calls. WebGPU is used when
+ * available (much faster), otherwise it falls back to WebAssembly on the CPU.
  */
 export function loadDetector(
+  modelId: string,
   onProgress?: (percent: number) => void,
 ): Promise<ObjectDetectionPipeline> {
-  if (detectorPromise) return detectorPromise;
+  const cached = detectorPromises.get(modelId);
+  if (cached) return cached;
 
   const useWebGPU = supportsWebGPU();
   activeBackend = useWebGPU ? 'webgpu' : 'wasm';
@@ -59,12 +73,17 @@ export function loadDetector(
     options?: Record<string, unknown>,
   ) => Promise<ObjectDetectionPipeline>;
 
-  detectorPromise = createPipeline('object-detection', MODEL_ID, {
+  const promise = createPipeline('object-detection', modelId, {
     device: useWebGPU ? 'webgpu' : 'wasm',
     progress_callback,
+  }).catch((err) => {
+    // Don't keep a rejected promise cached, so the next attempt retries cleanly.
+    detectorPromises.delete(modelId);
+    throw err;
   });
 
-  return detectorPromise;
+  detectorPromises.set(modelId, promise);
+  return promise;
 }
 
 /**
