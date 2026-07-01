@@ -3,6 +3,7 @@ import CameraStage from './components/CameraStage';
 import StatsPanel from './components/StatsPanel';
 import Controls from './components/Controls';
 import Gallery from './components/Gallery';
+import Vocabulary from './components/Vocabulary';
 import {
   loadDetector,
   detectFrame,
@@ -308,6 +309,7 @@ export default function App() {
         />
       </main>
 
+      <Vocabulary />
       <HowItWorks />
       <Footer modelId={modelId} />
     </div>
