@@ -1,5 +1,11 @@
 import type { Status } from '../App';
-import { MODELS } from '../lib/detector';
+import { MODELS, type Detail } from '../lib/detector';
+
+const DETAILS: { value: Detail; label: string }[] = [
+  { value: 'speed', label: 'Speed (fastest)' },
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'quality', label: 'Quality (slower)' },
+];
 
 interface ControlsProps {
   status: Status;
@@ -7,12 +13,14 @@ interface ControlsProps {
   mirror: boolean;
   modelId: string;
   switchingModel: boolean;
+  detail: Detail;
   onStart: () => void;
   onStop: () => void;
   onThreshold: (value: number) => void;
   onMirror: (value: boolean) => void;
   onSnapshot: () => void;
   onModel: (id: string) => void;
+  onDetail: (value: Detail) => void;
 }
 
 export default function Controls({
@@ -21,12 +29,14 @@ export default function Controls({
   mirror,
   modelId,
   switchingModel,
+  detail,
   onStart,
   onStop,
   onThreshold,
   onMirror,
   onSnapshot,
   onModel,
+  onDetail,
 }: ControlsProps) {
   const running = status === 'running';
   const busy = status === 'loading';
@@ -114,6 +124,21 @@ export default function Controls({
           ))}
         </select>
         {switchingModel && <span className="font-mono text-xs text-muted">Loading...</span>}
+      </label>
+
+      <label className="flex items-center gap-2">
+        <span className="font-mono text-xs uppercase tracking-wider text-muted">Detail</span>
+        <select
+          value={detail}
+          onChange={(e) => onDetail(e.target.value as Detail)}
+          className="rounded-lg border border-line bg-surface-2 px-2 py-1.5 font-mono text-xs text-fg outline-none transition hover:border-signal"
+        >
+          {DETAILS.map((d) => (
+            <option key={d.value} value={d.value}>
+              {d.label}
+            </option>
+          ))}
+        </select>
       </label>
     </div>
   );

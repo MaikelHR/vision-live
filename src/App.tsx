@@ -9,10 +9,13 @@ import {
   detectFrame,
   getBackend,
   detectBackend,
+  applyDetail,
   MODELS,
   DEFAULT_MODEL_ID,
+  DEFAULT_DETAIL,
   type Backend,
   type Detection,
+  type Detail,
 } from './lib/detector';
 import { colorForLabel } from './lib/colors';
 
@@ -41,6 +44,7 @@ export default function App() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [modelId, setModelId] = useState<string>(DEFAULT_MODEL_ID);
   const [switchingModel, setSwitchingModel] = useState(false);
+  const [detail, setDetail] = useState<Detail>(DEFAULT_DETAIL);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -163,6 +167,7 @@ export default function App() {
       await video.play();
 
       detectorRef.current = await detectorP;
+      applyDetail(detectorRef.current, detail);
       setBackend(getBackend());
 
       setStatus('running');
@@ -246,6 +251,7 @@ export default function App() {
     setSwitchingModel(true);
     try {
       const detector = await loadDetector(id);
+      applyDetail(detector, detail);
       detectorRef.current = detector;
       setBackend(getBackend());
     } catch (err) {
@@ -254,6 +260,12 @@ export default function App() {
     } finally {
       setSwitchingModel(false);
     }
+  }
+
+  // Trade input resolution for speed live; no model reload needed.
+  function changeDetail(next: Detail) {
+    setDetail(next);
+    if (detectorRef.current) applyDetail(detectorRef.current, next);
   }
 
   // Clean up on unmount.
@@ -291,6 +303,8 @@ export default function App() {
             modelId={modelId}
             switchingModel={switchingModel}
             onModel={changeModel}
+            detail={detail}
+            onDetail={changeDetail}
           />
           <Gallery
             snapshots={snapshots}

@@ -32,6 +32,26 @@ export interface Detection {
   box: { xmin: number; ymin: number; xmax: number; ymax: number };
 }
 
+export type Detail = 'speed' | 'balanced' | 'quality';
+
+export const DEFAULT_DETAIL: Detail = 'balanced';
+
+// Input-resolution presets. Fewer input pixels means much faster ViT inference,
+// at the cost of missing smaller or distant objects. This only changes the image
+// processor size; detections still come back in the original frame's coordinates,
+// and it can be swapped live between frames without reloading the model.
+const DETAIL_SIZES: Record<Detail, { shortest_edge: number; longest_edge: number }> = {
+  speed: { shortest_edge: 256, longest_edge: 416 },
+  balanced: { shortest_edge: 384, longest_edge: 640 },
+  quality: { shortest_edge: 512, longest_edge: 864 },
+};
+
+export function applyDetail(detector: ObjectDetectionPipeline, detail: Detail): void {
+  const ip = (detector as unknown as { processor?: { image_processor?: { size?: object } } })
+    .processor?.image_processor;
+  if (ip) ip.size = { ...DETAIL_SIZES[detail] };
+}
+
 // One cached pipeline per model id, so switching back to a loaded model is instant.
 const detectorPromises = new Map<string, Promise<ObjectDetectionPipeline>>();
 let activeBackend: Backend = 'wasm';
@@ -132,8 +152,9 @@ export async function detectFrame(
 
   ctx.drawImage(video, 0, 0, w, h);
   const { data } = ctx.getImageData(0, 0, w, h);
-  // RawImage from RGBA canvas data, then drop alpha -> RGB for the model.
-  const image = new RawImage(new Uint8ClampedArray(data), w, h, 4).rgb();
+  // RawImage from RGBA canvas data, then drop alpha -> RGB for the model. `.rgb()`
+  // copies into a fresh buffer, so we can hand it `data` directly without cloning.
+  const image = new RawImage(data, w, h, 4).rgb();
 
   const output = (await detector(image, { threshold })) as Detection[];
   return output;
